@@ -3,10 +3,10 @@ name: Control Droplets (Rocket + CRM)
 # Cuándo se ejecuta
 on:
   schedule:
-    # Encender de lunes a viernes a las 1:00 PM UTC (8:00 AM Perú)
-    - cron: '0 13 * * 1-5'
-    # Apagar de lunes a viernes a las 11:00 PM UTC (6:00 PM Perú)  
-    - cron: '0 23 * * 1-5'
+    # Encender TODOS LOS DÍAS a las 12:30 PM UTC (7:30 AM Perú)
+    - cron: '30 12 * * *'
+    # Apagar TODOS LOS DÍAS a las 2:00 AM UTC (9:00 PM Perú del día anterior)  
+    - cron: '0 2 * * *'
   
   # Permite ejecutar manualmente desde GitHub
   workflow_dispatch:
@@ -48,14 +48,14 @@ jobs:
             # Ejecución automática por horario
             HOUR=$(date +%H)
             
-            if [ $HOUR -eq 13 ]; then
+            if [ $HOUR -eq 12 ] && [ $(date +%M) -eq 30 ]; then
               echo "action=power_on" >> $GITHUB_OUTPUT
               echo "target=all" >> $GITHUB_OUTPUT
-              echo "message=⏰ Encendido automático - 8:00 AM Perú (todos los droplets)" >> $GITHUB_OUTPUT
-            elif [ $HOUR -eq 23 ]; then
+              echo "message=⏰ Encendido automático - 7:30 AM Perú TODOS LOS DÍAS (todos los droplets)" >> $GITHUB_OUTPUT
+            elif [ $HOUR -eq 2 ]; then
               echo "action=shutdown" >> $GITHUB_OUTPUT
               echo "target=all" >> $GITHUB_OUTPUT
-              echo "message=⏰ Apagado automático - 6:00 PM Perú (todos los droplets)" >> $GITHUB_OUTPUT
+              echo "message=⏰ Apagado automático - 9:00 PM Perú TODOS LOS DÍAS (todos los droplets)" >> $GITHUB_OUTPUT
             else
               echo "action=none" >> $GITHUB_OUTPUT
               echo "target=none" >> $GITHUB_OUTPUT

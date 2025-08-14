@@ -4,9 +4,9 @@ name: Control Droplets (Rocket + CRM)
 on:
   schedule:
     # Encender TODOS LOS DÍAS a las 12:30 PM UTC (7:30 AM Perú)
-    - cron: '30 12 * * *'
+    - cron: '30 11 * * *'
     # Apagar TODOS LOS DÍAS a las 2:00 AM UTC (9:00 PM Perú del día anterior)  
-    - cron: '0 2 * * *'
+    - cron: '0 1 * * *'
   
   # Permite ejecutar manualmente desde GitHub
   workflow_dispatch:

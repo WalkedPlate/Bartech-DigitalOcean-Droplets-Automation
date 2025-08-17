@@ -3,10 +3,10 @@ name: Control Droplets (Rocket + CRM)
 # Cuándo se ejecuta
 on:
   schedule:
-    # Encender TODOS LOS DÍAS a las 12:30 PM UTC (7:30 AM Perú)
+    # Encender TODOS LOS DÍAS a las 11:30 AM UTC (6:30 AM Perú)
     - cron: '30 11 * * *'
     # Apagar TODOS LOS DÍAS a las 2:00 AM UTC (9:00 PM Perú del día anterior)  
-    - cron: '0 1 * * *'
+    - cron: '0 2 * * *'
   
   # Permite ejecutar manualmente desde GitHub
   workflow_dispatch:
@@ -47,26 +47,29 @@ jobs:
           else
             # Ejecución automática por horario
             HOUR=$(date +%H)
+            MINUTE=$(date +%M)
             
-            if [ $HOUR -eq 12 ] && [ $(date +%M) -eq 30 ]; then
+            # Ventana de encendido: 11:00-12:00 UTC (6:00-7:00 AM Perú)
+            if [ $HOUR -eq 11 ] || ([ $HOUR -eq 12 ] && [ $MINUTE -lt 30 ]); then
               echo "action=power_on" >> $GITHUB_OUTPUT
               echo "target=all" >> $GITHUB_OUTPUT
-              echo "message=⏰ Encendido automático - 7:30 AM Perú TODOS LOS DÍAS (todos los droplets)" >> $GITHUB_OUTPUT
-            elif [ $HOUR -eq 2 ]; then
+              echo "message= Encendido automático - 6:30 AM Perú TODOS LOS DÍAS (todos los droplets)" >> $GITHUB_OUTPUT
+            # Ventana de apagado: 02:00-03:00 UTC (9:00-10:00 PM Perú)
+            elif [ $HOUR -eq 2 ] || ([ $HOUR -eq 3 ] && [ $MINUTE -lt 30 ]); then
               echo "action=shutdown" >> $GITHUB_OUTPUT
               echo "target=all" >> $GITHUB_OUTPUT
-              echo "message=⏰ Apagado automático - 9:00 PM Perú TODOS LOS DÍAS (todos los droplets)" >> $GITHUB_OUTPUT
+              echo "message= Apagado automático - 9:00 PM Perú TODOS LOS DÍAS (todos los droplets)" >> $GITHUB_OUTPUT
             else
               echo "action=none" >> $GITHUB_OUTPUT
               echo "target=none" >> $GITHUB_OUTPUT
-              echo "message=🤔 No hay acción programada para esta hora" >> $GITHUB_OUTPUT
+              echo "message=No hay acción programada para esta hora" >> $GITHUB_OUTPUT
             fi
           fi
 
-      - name: 🚀 Controlar Droplet ROCKET
+      - name: Controlar Droplet ROCKET
         if: steps.setup.outputs.action != 'none' && (steps.setup.outputs.target == 'all' || steps.setup.outputs.target == 'rocket')
         run: |
-          echo "🚀 Ejecutando ${{ steps.setup.outputs.action }} en ROCKET (ID: ${{ secrets.DROPLET_ID_ROCKET }})"
+          echo "ejecutando ${{ steps.setup.outputs.action }} en ROCKET (ID: ${{ secrets.DROPLET_ID_ROCKET }})"
           
           response=$(curl -s -w "%{http_code}" -o /tmp/rocket.json -X POST \
             -H "Content-Type: application/json" \
@@ -75,16 +78,16 @@ jobs:
             -d '{"type":"${{ steps.setup.outputs.action }}"}')
           
           if [ $response -eq 201 ]; then
-            echo "✅ ROCKET: Acción ejecutada exitosamente"
+            echo "ROCKET: Acción ejecutada exitosamente"
             cat /tmp/rocket.json | jq -r '"Estado: " + .action.status'
           elif [ $response -eq 401 ]; then
-            echo "🔑 ❌ ROCKET: TOKEN INVÁLIDO o EXPIRADO"
+            echo "ROCKET: TOKEN INVÁLIDO o EXPIRADO"
             exit 1
           elif [ $response -eq 404 ]; then
-            echo "🔍 ❌ ROCKET: Droplet no encontrado (ID: ${{ secrets.DROPLET_ID_ROCKET }})"
+            echo "ROCKET: Droplet no encontrado (ID: ${{ secrets.DROPLET_ID_ROCKET }})"
             exit 1
           else
-            echo "❌ ROCKET: Error HTTP $response"
+            echo "ROCKET: Error HTTP $response"
             cat /tmp/rocket.json
             exit 1
           fi
@@ -101,16 +104,16 @@ jobs:
             -d '{"type":"${{ steps.setup.outputs.action }}"}')
           
           if [ $response -eq 201 ]; then
-            echo "✅ CRM INTERNO: Acción ejecutada exitosamente"
+            echo "CRM INTERNO: Acción ejecutada exitosamente"
             cat /tmp/crm_interno.json | jq -r '"Estado: " + .action.status'
           elif [ $response -eq 401 ]; then
-            echo "🔑 ❌ CRM INTERNO: TOKEN INVÁLIDO o EXPIRADO"
+            echo "CRM INTERNO: TOKEN INVÁLIDO o EXPIRADO"
             exit 1
           elif [ $response -eq 404 ]; then
-            echo "🔍 ❌ CRM INTERNO: Droplet no encontrado (ID: ${{ secrets.DROPLET_ID_CRM_INTERNO }})"
+            echo "CRM INTERNO: Droplet no encontrado (ID: ${{ secrets.DROPLET_ID_CRM_INTERNO }})"
             exit 1
           else
-            echo "❌ CRM INTERNO: Error HTTP $response"
+            echo "CRM INTERNO: Error HTTP $response"
             cat /tmp/crm_interno.json
             exit 1
           fi
@@ -127,16 +130,16 @@ jobs:
             -d '{"type":"${{ steps.setup.outputs.action }}"}')
           
           if [ $response -eq 201 ]; then
-            echo "✅ CRM EXTERNO: Acción ejecutada exitosamente"
+            echo "CRM EXTERNO: Acción ejecutada exitosamente"
             cat /tmp/crm_externo.json | jq -r '"Estado: " + .action.status'
           elif [ $response -eq 401 ]; then
-            echo "🔑 ❌ CRM EXTERNO: TOKEN INVÁLIDO o EXPIRADO"
+            echo "CRM EXTERNO: TOKEN INVÁLIDO o EXPIRADO"
             exit 1
           elif [ $response -eq 404 ]; then
-            echo "🔍 ❌ CRM EXTERNO: Droplet no encontrado (ID: ${{ secrets.DROPLET_ID_CRM_EXTERNO }})"
+            echo "CRM EXTERNO: Droplet no encontrado (ID: ${{ secrets.DROPLET_ID_CRM_EXTERNO }})"
             exit 1
           else
-            echo "❌ CRM EXTERNO: Error HTTP $response"
+            echo "CRM EXTERNO: Error HTTP $response"
             cat /tmp/crm_externo.json
             exit 1
           fi
@@ -149,10 +152,10 @@ jobs:
           
           # ROCKET
           if [ "${{ steps.setup.outputs.target }}" = "all" ] || [ "${{ steps.setup.outputs.target }}" = "rocket" ]; then
-            echo "🚀 ROCKET:"
+            echo "ROCKET:"
             curl -s -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
               "https://api.digitalocean.com/v2/droplets/${{ secrets.DROPLET_ID_ROCKET }}" | \
-              jq -r '"  📋 Estado: " + .droplet.status + " | 🌐 IP: " + (.droplet.networks.v4[0].ip_address // "No disponible")'
+              jq -r '" Estado: " + .droplet.status + " | IP: " + (.droplet.networks.v4[0].ip_address // "No disponible")'
             echo ""
           fi
           
@@ -161,7 +164,7 @@ jobs:
             echo "🏢 CRM INTERNO:"
             curl -s -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
               "https://api.digitalocean.com/v2/droplets/${{ secrets.DROPLET_ID_CRM_INTERNO }}" | \
-              jq -r '"  📋 Estado: " + .droplet.status + " | 🌐 IP: " + (.droplet.networks.v4[0].ip_address // "No disponible")'
+              jq -r '"  Estado: " + .droplet.status + " | IP: " + (.droplet.networks.v4[0].ip_address // "No disponible")'
             echo ""
           fi
           
@@ -170,16 +173,16 @@ jobs:
             echo "🌐 CRM EXTERNO:"
             curl -s -H "Authorization: Bearer ${{ secrets.DO_TOKEN }}" \
               "https://api.digitalocean.com/v2/droplets/${{ secrets.DROPLET_ID_CRM_EXTERNO }}" | \
-              jq -r '"  📋 Estado: " + .droplet.status + " | 🌐 IP: " + (.droplet.networks.v4[0].ip_address // "No disponible")'
+              jq -r '"Estado: " + .droplet.status + " | IP: " + (.droplet.networks.v4[0].ip_address // "No disponible")'
             echo ""
           fi
 
-      - name: 📝 Resumen de ejecución
+      - name: Resumen de ejecución
         if: always()
         run: |
           echo "============================================"
-          echo "📅 Fecha: $(date)"
-          echo "⚡ Acción: ${{ steps.setup.outputs.action }}"
-          echo "🎯 Objetivo: ${{ steps.setup.outputs.target }}"
-          echo "💬 ${{ steps.setup.outputs.message }}"
+          echo " Fecha: $(date)"
+          echo " Acción: ${{ steps.setup.outputs.action }}"
+          echo " Objetivo: ${{ steps.setup.outputs.target }}"
+          echo " ${{ steps.setup.outputs.message }}"
           echo "============================================"
